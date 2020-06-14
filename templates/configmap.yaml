@@ -1,0 +1,16 @@
+{{- if.Values.env.open }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "go-app.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    helm.sh/chart: {{ include "go-app.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+{{- range $key, $value := .Values.env.open }}
+  {{ $key }}: {{ $value | toString | quote }}
+{{- end }}
+{{- end }}

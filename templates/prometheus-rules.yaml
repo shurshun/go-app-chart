@@ -1,0 +1,19 @@
+{{- if .Values.monitoring.prometheus.groups }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "go-app.fullname" . }}-prom-rules
+  labels:
+    helm.sh/chart: {{ include "go-app.chart" . }}
+{{ toYaml .Values.monitoring.prometheus.labels | indent 4 }}
+spec:
+  groups:
+{{- range $group, $rules := .Values.monitoring.prometheus.groups }}
+    - name: {{ $group }}.{{ $.Release.Name }}
+      rules:
+{{- range $name, $rule := $rules }}
+        - alert: {{ $name }}
+{{ toYaml $rule | indent 10 }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,22 @@
+{{- if .Values.hpa.enabled -}}
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "go-app.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    helm.sh/chart: {{ include "go-app.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: {{ include "go-app.name" . }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    {{- with .Values.hpa.metrics }}
+{{ toYaml . | indent 2 }}
+    {{- end }}
+{{- end -}}

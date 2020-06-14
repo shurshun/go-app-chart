@@ -1,0 +1,234 @@
+# Default values for go-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+daemonSet: false
+statefulSet: false
+
+podManagementPolicy: Parallel
+
+strategy: {}
+  # type: RollingUpdate / Recreate
+  # rollingUpdate:
+  #   maxSurge: 2        # how many pods we can add at a time
+  #   maxUnavailable: 0
+
+securityContext: {}
+  # capabilities:
+  #   add:
+  #     - NET_BIND_SERVICE
+  #   drop:
+  #     - ALL
+  # runAsUser: 33
+
+extraPodSpec: {}
+# shareProcessNamespace: true
+
+extraSpec: {}
+# lifecycle:
+#   postStart:
+#     exec:
+#       command: ["/bin/sh", "-c", "echo Hello from the postStart handler > /usr/share/message"]
+#   preStop:
+#     exec:
+#       command: ["/usr/sbin/nginx","-s","quit"]
+
+# PodDisruptionBudget
+pdb:
+  enabled: false
+  maxUnavailable: 1
+
+service:
+  type: ClusterIP
+  clusterIP: "" # ip from 10.233.0.0/18
+  headless: false
+  externalIPs: []
+    # - 1.1.1.1
+    # - 2.2.2.2
+
+defaults:
+  rbac:
+    rules:
+      - apiGroups: ["*"]
+        resources: ["*"]
+        verbs: ["*"]
+    roleRef: |
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: {{ template "go-app.fullname" . }}
+  livenessProbe:
+    httpGet:
+      path: /_healthz
+      port: metrics
+      scheme: HTTP
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 11
+
+  readinessProbe:
+    httpGet:
+      path: /_healthz
+      port: metrics
+      scheme: HTTP
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+ports: {}
+  # http:
+  #   port: 80
+  #   protocol: TCP
+  # metrics:
+  #   port: 8080
+  #   labels:
+  #     prometheus.io/scrape: "true"
+  # http-ext:
+  #   port: 81
+  #   nodePort: 31003
+
+auth:
+  enabled: false
+  users: {}
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 75
+
+ingress:
+  enabled: false
+  rules:
+    http: /
+
+# if app can't use env variables, you can define additional configs
+configs: []
+  # - name: parameters.yml
+  #   path: /app/app/config/parameters.yml
+  #   format: json?
+  #   data: |
+  #     <...>
+
+cronjobs: []
+  # - name: echo-ok
+  #   schedule: "10 6 * * *"
+  #   args:
+  #     - echo
+  #     - ok
+
+jobs: []
+  # - name: db-migrate
+  #   activeDeadlineSeconds: 60
+  #   ttlSecondsAfterFinished: 86400
+  #   annotations:
+  #     "helm.sh/hook": pre-install,pre-upgrade
+  #     "helm.sh/hook-delete-policy": hook-succeeded
+  #   args:
+  #     - echo
+  #     - ok
+
+pipelineID: 0
+
+podLabels: {}
+  # app.kubernetes.io/type: mysql
+
+podAnnotations: {}
+  # vault.security.banzaicloud.io/vault-addr: "http://vault.db:8200"
+  # vault.security.banzaicloud.io/vault-role: "test"
+  # vault.security.banzaicloud.io/vault-skip-verify: "true"
+  # vault.security.banzaicloud.io/vault-path: "kubernetes"
+
+monitoring:
+  prometheus:
+    labels:
+      prom_rules: cluster
+      release: mon
+    groups: {}
+  dashboards: {}
+
+env:
+  open: {}
+    # - LOG_LEVEL: debug
+  secret: {}
+    # - MYSQL_DSN: 127.0.0.1:3306
+  raw: {}
+
+command: []
+args: []
+
+# create service account with specific access to run/list/etc jobs/pods in app namespace
+rbac:
+  enabled: false
+  namespaced: true
+  rules: []
+    # - apiGroups: ["*"]
+    #   resources: ["*"]
+    #   verbs: ["*"]
+
+volumes: []
+#   - name: extras
+#     emptyDir: {}
+
+volumeMounts: []
+#   - name: extras
+#     mountPath: /usr/share/extras
+#     readOnly: true
+
+persistence:
+  enabled: false
+  # storageClass: "local-storage"
+  # accessMode: ReadWriteOnce
+  # size: 1Gi
+  # mountPath: "/data"
+
+initContainers: []
+#   - name: do-something
+#     image: busybox
+#     command: ['do', 'something']
+
+extraContainers: []
+#   - name: do-something
+#     image: busybox
+#     command: ['do', 'something']
+
+# Optionally specify an array of imagePullSecrets.
+# Secrets must be manually created in the namespace.
+# ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+imagePullSecrets: []
+  # - name: myRegistryKeySecretName
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

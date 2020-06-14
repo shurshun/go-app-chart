@@ -1,0 +1,109 @@
+{{- $fullName := include "go-app.fullname" . -}}
+{{- $name := include "go-app.name" . -}}
+{{- $chart := include "go-app.chart" . -}}
+{{- range $idx, $job := .Values.jobs }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullName }}-{{ $job.name }}-{{ $.Values.pipelineID }}
+  labels:
+    app.kubernetes.io/name: {{ $name }}-{{ $job.name }}
+    helm.sh/chart: {{ $chart }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+{{- with (merge $.Values.podAnnotations $job.annotations) }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  activeDeadlineSeconds: {{ $job.activeDeadlineSeconds | default 60 }}
+  ttlSecondsAfterFinished: {{ $job.ttlSecondsAfterFinished | default 86400 }}
+  template:
+    spec:
+      restartPolicy: {{ $job.restartPolicy | default "Never" }}
+      volumes:
+      {{- if $.Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+          {{- if $.Values.statefulSet }}
+            claimName: {{ $.Values.persistence.existingClaim | default (print "data-" $fullName "-0") }}
+          {{- else }}
+            claimName: {{ $.Values.persistence.existingClaim | default $fullName }}
+          {{- end }}
+      {{- end }}
+      {{- if $.Values.configs }}
+        - name: app-configs
+          secret:
+            secretName: {{ $fullName }}-configs
+      {{- end }}
+      {{- with $.Values.volumes }}
+{{ toYaml . | indent 12 }}
+      {{- end }}
+      containers:
+        - name: {{ $job.name }}
+        {{- if $job.image }}
+          image: "{{ default $.Values.image.repository $job.image.repository }}:{{ default $.Values.image.tag $job.image.tag }}"
+          imagePullPolicy: {{ default $.Values.image.pullPolicy $job.image.PullPolicy }}
+        {{- else }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+        {{- end }}
+  {{- with $job.command }}
+          command:
+{{ toYaml . | indent 12 }}
+  {{- end }}
+  {{- with $job.args }}
+          args:
+{{ toYaml . | indent 12 }}
+  {{- end }}
+        {{- with $.Values.env.raw }}
+          env:
+  {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | toString | quote }}
+  {{- end }}
+        {{- end }}
+        {{- if or $.Values.env.secret $.Values.env.open }}
+          envFrom:
+          {{- if $.Values.env.secret }}
+            - secretRef:
+                name: {{ $fullName }}
+          {{- end }}
+          {{- if $.Values.env.open }}
+            - configMapRef:
+                name: {{ $fullName }}
+          {{- end }}
+        {{- end }}
+        {{- if or $.Values.configs $.Values.volumeMounts $.Values.persistence.enabled }}
+          volumeMounts:
+          {{- if $.Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ $.Values.persistence.mountPath }}
+          {{- end }}
+          {{- range $idx, $cfg := $.Values.configs }}
+            - name: app-configs
+              mountPath: {{ $cfg.path }}
+              subPath: {{ $cfg.name }}
+              readOnly: true
+          {{- end }}
+          {{- with $.Values.volumeMounts }}
+{{ toYaml . | indent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- with (default $.Values.resources $job.resources) }}
+          resources:
+{{ toYaml . | indent 12 }}
+      {{- end }}
+      {{- with (default $.Values.nodeSelector $job.nodeSelector) }}
+          nodeSelector:
+{{ toYaml . | indent 12 }}
+    {{- end }}
+    {{- with (default $.Values.affinity $job.affinity) }}
+          affinity:
+{{ toYaml . | indent 12 }}
+    {{- end }}
+    {{- with (default $.Values.tolerations $job.tolerations) }}
+          tolerations:
+{{ toYaml . | indent 12 }}
+    {{- end }}
+---
+{{- end }}

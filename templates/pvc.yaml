@@ -1,0 +1,22 @@
+{{- if not .Values.statefulSet }}
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "go-app.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    helm.sh/chart: {{ include "go-app.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+{{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+{{- end }}
+{{- end }}
+{{- end }}

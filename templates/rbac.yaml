@@ -1,0 +1,47 @@
+{{- if .Values.rbac.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "go-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+---
+{{- if .Values.rbac.namespaced }}
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "go-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+rules:
+{{ include "go-app.rbac-rules" . | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ template "go-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ template "go-app.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+{{ tpl (default .Values.defaults.rbac.roleRef .Values.rbac.roleRef) . | indent 2  }}
+{{- else }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ template "go-app.fullname" . }}
+rules:
+{{ include "go-app.rbac-rules" . | indent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "go-app.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "go-app.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+{{ tpl (default .Values.defaults.rbac.roleRef .Values.rbac.roleRef) . | indent 2  }}
+{{- end }}
+{{- end }}

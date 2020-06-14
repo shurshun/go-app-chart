@@ -1,0 +1,63 @@
+{{- if .Values.ports -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "go-app.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    helm.sh/chart: {{ include "go-app.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- range $name, $data := .Values.ports }}
+{{- if $data.labels }}
+{{ toYaml $data.labels | indent 4 }}
+{{- end }}
+{{- end }}
+spec:
+{{- if .Values.service.clusterIP }}
+  clusterIP: {{ .Values.service.clusterIP }}
+{{- end }}
+{{- with .Values.service.externalIPs }}
+  externalIPs:
+{{ toYaml . | indent 4 }}
+{{- end }}
+  type: {{ .Values.service.type }}
+  ports:
+{{- range $name, $data := .Values.ports }}
+    - port: {{ $data.port }}
+      targetPort: {{ $name }}
+      name: {{ $name }}
+      protocol: {{ default "TCP" $data.protocol }}
+    {{- if regexMatch "NodePort" $.Values.service.type }}
+      nodePort: {{ $data.nodePort }}
+    {{- end }}
+{{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Values.service.headless }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "go-app.fullname" . }}-headless
+  labels:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    helm.sh/chart: {{ include "go-app.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  clusterIP: None
+  type: {{ .Values.service.type }}
+  ports:
+{{- range $name, $data := .Values.ports }}
+    - port: {{ $data.port }}
+      targetPort: {{ $name }}
+      name: {{ $name }}
+      protocol: {{ default "TCP" $data.protocol }}
+{{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "go-app.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,64 @@
+image:
+  repository: registry.opensource.zalan.do/teapot/external-dns
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: external-dns
+fullnameOverride: external-dns
+
+strategy:
+  type: Recreate
+
+ports:
+  metrics:
+    port: 7979
+    labels:
+      prometheus.io/scrape: "true"
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: metrics
+    scheme: HTTP
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: metrics
+    scheme: HTTP
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+env:
+  secret:
+    CF_API_TOKEN: "<REDACTED>"
+  open:
+    EXTERNAL_DNS_SOURCE: ingress
+    EXTERNAL_DNS_PROVIDER: cloudflare
+    EXTERNAL_DNS_LOG_LEVEL: debug
+
+rbac:
+  enabled: true
+  namespaced: false
+  roleRef: |
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: {{ template "go-app.fullname" . }}
+  rules:
+    - apiGroups: [""]
+      resources: ["services","endpoints","pods"]
+      verbs: ["get","watch","list"]
+    - apiGroups: ["extensions"]
+      resources: ["ingresses"]
+      verbs: ["get","watch","list"]
+    - apiGroups: [""]
+      resources: ["nodes"]
+      verbs: ["list"]

@@ -23,6 +23,7 @@ Examples of usage this chart you can find in my projects listed below:
 
   - [Domain Harverster](https://github.com/shurshun/domain-harvester)
 
+Or in the [examples directory](https://github.com/shurshun/go-app-chart/tree/master/examples).
 
 ## Configuration
 
